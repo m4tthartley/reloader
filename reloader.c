@@ -12,7 +12,7 @@ typedef struct {
 	string dir_path;
 } state_t;
 
-typedef void (*start_proc)(void* param);
+typedef void* (*start_proc)(void);
 typedef void (*frame_proc)(void* param);
 
 b32 do_reload = FALSE;
@@ -95,18 +95,6 @@ DWORD dir_listen_thread(void* lp) {
 	for(;;) {
 		DWORD wait = WaitForSingleObject(overlapped.hEvent, INFINITE);
 		
-		if(!ReadDirectoryChangesW(
-			file_handle,
-			file_changes,
-			sizeof(file_changes),
-			TRUE,
-			FILE_NOTIFY_CHANGE_LAST_WRITE,
-			&bytes,
-			&overlapped,
-			NULL)) {
-			core_error("ReadDirectoryChanges: %s", win32_error());
-		}
-
 		if(wait == WAIT_OBJECT_0) {
 			printf("wait object 0 \n");
 		} else {
@@ -133,6 +121,19 @@ DWORD dir_listen_thread(void* lp) {
 			}
 		}
 
+		zeroMemory(file_changes, sizeof(file_changes));
+
+		if(!ReadDirectoryChangesW(
+			file_handle,
+			file_changes,
+			sizeof(file_changes),
+			TRUE,
+			FILE_NOTIFY_CHANGE_LAST_WRITE,
+			&bytes,
+			&overlapped,
+			NULL)) {
+			core_error("ReadDirectoryChanges: %s", win32_error());
+		}
 	}
 
 	return 0;
@@ -196,13 +197,13 @@ int main(int argc, char** argv) {
 	GetCurrentThreadStackLimits(&low, &high);
 	register void *sp asm ("sp");
 
-	start(NULL);
+	void* user_param = start();
 	for(;;) {
 		// atomic_compare_exchange_weak(&do_reload, TRUE, FALSE);
 		if(atomic_compare_swap32(&do_reload, TRUE, FALSE)) {
 			reload(&state);
 		}
-		frame(NULL);
+		frame(user_param);
 	}
 	// for(;;) {
 	// 	Sleep(1);
