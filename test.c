@@ -36,8 +36,8 @@ void frame(void* param) {
 	state_t* state = param;
 	core_window_update(&state->window);
 	gfx_coord_system(800.0f/64.0f, 600.0f/64.0f);
-	gfx_clear(vec4(sinf(core_time_seconds(&state->window))*0.5f+0.5f,0.8f,0.5f,0));
-	// gfx_clear(vec4(0.5f,0.8f,0.5f,0));
+	// gfx_clear(vec4(sinf(core_time_seconds(&state->window))*0.5f+0.5f,0.8f,0.5f,0));
+	gfx_clear(vec4(1, 0, 0, 0));
 	gfx_color(vec4(1, 1, 1, 1));
 	if(state->pos.x < -8.0f) state->speed.x = 1;
 	if(state->pos.x > 8.0f) state->speed.x = -1;

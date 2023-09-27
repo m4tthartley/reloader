@@ -1,10 +1,13 @@
 
-#include <fileapi.h>
-#include <stdatomic.h>
+// #include <fileapi.h>
+// #include <stdatomic.h>
 #include <stdio.h>
-#include <stdatomic.h>
+// #include <stdatomic.h>
+#include <processthreadsapi.h>
 
 #include <core.h>
+
+#include "net.c"
 
 typedef struct {
 	string dll_filename;
@@ -43,24 +46,23 @@ char* win32_error() {
 	return _win32_error_buffer;
 }
 
-FILE_NOTIFY_INFORMATION file_changes[16];
-
-void completion_routine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped) {
-	printf("completion routine \n");
-	FILE_NOTIFY_INFORMATION* file = file_changes;
-	while(file) {
-		printf("%s \n", file->FileName);
-		// if()
-
-		file = NULL;
-		if(file->NextEntryOffset) {
-			file = (u8*)file + file->NextEntryOffset;
-		}
-	}
-}
+// void completion_routine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped) {
+// 	printf("completion routine \n");
+// 	FILE_NOTIFY_INFORMATION* file = file_changes;
+// 	while(file) {
+// 		printf("%s \n", file->FileName);
+// 		// if()
+//
+// 		file = NULL;
+// 		if(file->NextEntryOffset) {
+// 			file = (u8*)file + file->NextEntryOffset;
+// 		}
+// 	}
+// }
 
 DWORD dir_listen_thread(void* lp) {
 	state_t* state = lp;
+	FILE_NOTIFY_INFORMATION file_changes[16];
 
 	HANDLE file_handle = CreateFileA(
 		state->dir_path,
@@ -70,7 +72,7 @@ DWORD dir_listen_thread(void* lp) {
 		OPEN_EXISTING,
 		FILE_FLAG_BACKUP_SEMANTICS|FILE_FLAG_OVERLAPPED,
 		NULL);
-	if(!file_handle == INVALID_HANDLE_VALUE) {
+	if(file_handle == INVALID_HANDLE_VALUE) {
 		printf("\033[91mCreateFileA failed\033[0m \n");
 	}
 
@@ -93,13 +95,14 @@ DWORD dir_listen_thread(void* lp) {
 	}
 
 	for(;;) {
-		DWORD wait = WaitForSingleObject(overlapped.hEvent, INFINITE);
+		// DWORD wait = WaitForSingleObject(overlapped.hEvent, INFINITE);
 		
-		if(wait == WAIT_OBJECT_0) {
-			printf("wait object 0 \n");
-		} else {
-			printf("wait error \n");
-		}
+		// if(wait != WAIT_OBJECT_0) {
+		// 	printf("wait result is not 0: %i \n", wait);
+		// }
+
+		int bytes_transfered = 0;
+		GetOverlappedResult(file_handle, &overlapped, &bytes_transfered, TRUE);
 
 		FILE_NOTIFY_INFORMATION* file = file_changes;
 		while(file) {
@@ -169,6 +172,8 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
+	server();
+
 	// char dir_buffer[MAX_PATH] = {0};
 	// PathCchRemoveFileSpec(dir_buffer, MAX_PATH);
 	// printf("dir %s \n", dir_buffer);
@@ -192,22 +197,18 @@ int main(int argc, char** argv) {
 
 	reload(&state);
 
-	PULONG low;
-	PULONG high;
-	GetCurrentThreadStackLimits(&low, &high);
-	register void *sp asm ("sp");
+	// PULONG low;
+	// PULONG high;
+	// GetCurrentThreadStackLimits(&low, &high);
+	// register void *sp asm ("sp");
 
 	void* user_param = start();
 	for(;;) {
-		// atomic_compare_exchange_weak(&do_reload, TRUE, FALSE);
 		if(atomic_compare_swap32(&do_reload, TRUE, FALSE)) {
 			reload(&state);
 		}
 		frame(user_param);
 	}
-	// for(;;) {
-	// 	Sleep(1);
-	// }
 
 	return 0;
 }
