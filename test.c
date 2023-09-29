@@ -1,17 +1,20 @@
 
-#include <stdarg.h>
-#include <stdio.h>
+// #include <stdarg.h>
+// #include <stdio.h>
 
-#include <terminal.h>
-#include <core.h>
 #include <platform.h>
 #include <im.h>
+#include <timer.h>
+#include <file.h>
 
 typedef struct {
 	core_window_t window;
+	core_timer_t timer;
 	vec3_t pos;
 	int2 speed;
 	dynarr_t blocks;
+	gfx_texture_t font;
+	m_arena assets;
 } state_t;
 
 typedef struct {
@@ -23,11 +26,17 @@ void* start() {
 
 	core_window(&state->window, "Reloader Test", 800, 600, 0);
 	core_opengl(&state->window);
+	core_timer(&state->timer);
 
 	state->pos = (vec3_t){0, 5};
 	state->speed = (int2){1, 1};
 
 	state->blocks = dynarr(sizeof(block_t));
+
+	m_stack(&state->assets, 0, 0);
+	m_reserve(&state->assets, GB(1), PAGE_SIZE);
+	bitmap_t* font_data = f_load_font_file(&state->assets, "../core/font/font.bmp");
+	state->font = gfx_create_texture(font_data);
 
 	return state;
 }
@@ -35,6 +44,7 @@ void* start() {
 void frame(void* param) {
 	state_t* state = param;
 	core_window_update(&state->window);
+	core_timer_update(&state->timer);
 	gfx_coord_system(800.0f/64.0f, 600.0f/64.0f);
 	// gfx_clear(vec4(sinf(core_time_seconds(&state->window))*0.5f+0.5f,0.8f,0.5f,0));
 	gfx_clear(vec4(1, 0, 0, 0));
@@ -43,8 +53,8 @@ void frame(void* param) {
 	if(state->pos.x > 8.0f) state->speed.x = -1;
 	if(state->pos.y < -8.0f) state->speed.y = 1;
 	if(state->pos.y > 8.0f) state->speed.y = -1;
-	state->pos.x += (f32)state->speed.x * state->window.dt * 5.0f;
-	state->pos.y += (f32)state->speed.y * state->window.dt * 5.0f;
+	state->pos.x += (f32)state->speed.x * state->timer.dt * 5.0f;
+	state->pos.y += (f32)state->speed.y * state->timer.dt * 5.0f;
 	gfx_quad(state->pos, vec2(0.5f, 0.5f));
 
 	float time = sinf(core_time_seconds(&state->window) * 1.0f) * 0.4f + 0.6f;
@@ -68,13 +78,20 @@ void frame(void* param) {
 		gfx_quad(vec3(-10.0f + (i % 21)*1.0f, -10.0f + (i / 21), 0), vec2(0.5f, 0.5f));
 	}
 
+	// glEnable(GL_BLEND);
+	// glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	gfx_color(vec4(1, 1, 1, 1));
+	gfx_texture(&state->font);
+	gfx_text(&state->window, vec2(-11, 8), 2, "hello world");
+	gfx_texture(NULL);
+
 	core_opengl_swap(&state->window);
 }
 
 int main() {
-	start(NULL);
+	void* state = start(NULL);
 	for(;;) {
-		frame(NULL);
+		frame(state);
 	}
 }
 

@@ -7,7 +7,7 @@
 
 #include <core.h>
 
-#include "net.c"
+// #include "net.c"
 
 typedef struct {
 	string dll_filename;
@@ -23,28 +23,28 @@ HANDLE lib;
 start_proc start;
 frame_proc frame;
 
-void core_error(char* err, ...) {
-	char str[1024];
-	va_list va;
-	va_start(va, err);
-	vsnprintf(str, 1024, err, va);
-	printf("%s\n", str);
-	va_end(va);
-}
+// void core_error(char* err, ...) {
+// 	char str[1024];
+// 	va_list va;
+// 	va_start(va, err);
+// 	vsnprintf(str, 1024, err, va);
+// 	printf("%s\n", str);
+// 	va_end(va);
+// }
 
-char _win32_error_buffer[1024];
-char* win32_error() {
-	DWORD error = GetLastError();
-	FormatMessage(
-		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
-		NULL,
-		error,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPWSTR)_win32_error_buffer,
-		sizeof(_win32_error_buffer),
-		NULL);
-	return _win32_error_buffer;
-}
+// char _win32_error_buffer[1024];
+// char* win32_error() {
+// 	DWORD error = GetLastError();
+// 	FormatMessage(
+// 		FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+// 		NULL,
+// 		error,
+// 		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+// 		(LPWSTR)_win32_error_buffer,
+// 		sizeof(_win32_error_buffer),
+// 		NULL);
+// 	return _win32_error_buffer;
+// }
 
 // void completion_routine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped) {
 // 	printf("completion routine \n");
@@ -91,7 +91,7 @@ DWORD dir_listen_thread(void* lp) {
 		&bytes,
 		&overlapped,
 		NULL)) {
-		core_error("ReadDirectoryChanges: %s", win32_error());
+		core_win32_error(0, FALSE, "ReadDirectoryChanges: %s");
 	}
 
 	for(;;) {
@@ -135,7 +135,7 @@ DWORD dir_listen_thread(void* lp) {
 			&bytes,
 			&overlapped,
 			NULL)) {
-			core_error("ReadDirectoryChanges: %s", win32_error());
+			core_win32_error(0, FALSE, "ReadDirectoryChanges: %s");
 		}
 	}
 
@@ -172,7 +172,7 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 
-	server();
+	// server();
 
 	// char dir_buffer[MAX_PATH] = {0};
 	// PathCchRemoveFileSpec(dir_buffer, MAX_PATH);
