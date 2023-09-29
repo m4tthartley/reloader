@@ -6,6 +6,7 @@
 #include <im.h>
 #include <timer.h>
 #include <file.h>
+#include <audio.h>
 
 typedef struct {
 	core_window_t window;
@@ -15,6 +16,8 @@ typedef struct {
 	dynarr_t blocks;
 	gfx_texture_t font;
 	m_arena assets;
+
+	audio_buffer_t* hit_sound;
 } state_t;
 
 typedef struct {
@@ -38,6 +41,10 @@ void* start() {
 	bitmap_t* font_data = f_load_font_file(&state->assets, "../core/font/font.bmp");
 	state->font = gfx_create_texture(font_data);
 
+	state->hit_sound = f_load_wave(&state->assets, "hit.wav");
+	core_init_audio(CORE_DEFAULT_AUDIO_MIXER_PROC, 0);
+	core_play_sound(state->hit_sound, 0.5f);
+
 	return state;
 }
 
@@ -49,10 +56,22 @@ void frame(void* param) {
 	// gfx_clear(vec4(sinf(core_time_seconds(&state->window))*0.5f+0.5f,0.8f,0.5f,0));
 	gfx_clear(vec4(1, 0, 0, 0));
 	gfx_color(vec4(1, 1, 1, 1));
-	if(state->pos.x < -8.0f) state->speed.x = 1;
-	if(state->pos.x > 8.0f) state->speed.x = -1;
-	if(state->pos.y < -8.0f) state->speed.y = 1;
-	if(state->pos.y > 8.0f) state->speed.y = -1;
+	if(state->pos.x < -8.0f) {
+		state->speed.x = 1;
+		core_play_sound(state->hit_sound, 0.5f);
+	}
+	if(state->pos.x > 8.0f) {
+		state->speed.x = -1;
+		core_play_sound(state->hit_sound, 0.5f);
+	}
+	if(state->pos.y < -8.0f) {
+		state->speed.y = 1;
+		core_play_sound(state->hit_sound, 0.5f);
+	}
+	if(state->pos.y > 8.0f) {
+		state->speed.y = -1;
+		core_play_sound(state->hit_sound, 0.5f);
+	}
 	state->pos.x += (f32)state->speed.x * state->timer.dt * 5.0f;
 	state->pos.y += (f32)state->speed.y * state->timer.dt * 5.0f;
 	gfx_quad(state->pos, vec2(0.5f, 0.5f));
