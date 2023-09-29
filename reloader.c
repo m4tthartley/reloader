@@ -9,6 +9,8 @@
 
 // #include "net.c"
 
+#define VERSION "0.1"
+
 typedef struct {
 	string dll_filename;
 	string dll_path;
@@ -143,6 +145,11 @@ DWORD dir_listen_thread(void* lp) {
 }
 
 void reload(state_t* state) {
+	b32* terminate_threads = (b32*)GetProcAddress(lib, "terminate_threads");
+	if (terminate_threads) {
+		atomic_swap32(terminate_threads, TRUE);
+	}
+	Sleep(1000);
 	FreeLibrary(lib);
 	string copy_dll = s_format("%scopy_%s", state->dir_path, state->dll_filename);
 	int copy = CopyFile(state->dll_path, copy_dll, 0);
@@ -152,7 +159,7 @@ void reload(state_t* state) {
 }
 
 int main(int argc, char** argv) {
-	printf("Reloader \n");
+	printf("reloader version %s \n", VERSION);
 
 	if(argc < 2) {
 		printf("Arg 1 should be a directory to watch \n");
@@ -163,7 +170,8 @@ int main(int argc, char** argv) {
 
 	u8 strBuffer[PAGE_SIZE];
 	string_pool spool;
-	s_create_pool(&spool, strBuffer, sizeof(strBuffer));
+	s_create_pool(&spool, 0, 0);
+	m_reserve(&spool, GB(1), PAGE_SIZE);
 	s_pool(&spool);
 
 	HANDLE file = CreateFileA(argv[1], GENERIC_READ, FILE_SHARE_DELETE|FILE_SHARE_READ|FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
@@ -206,6 +214,7 @@ int main(int argc, char** argv) {
 	for(;;) {
 		if(atomic_compare_swap32(&do_reload, TRUE, FALSE)) {
 			reload(&state);
+			// s_pool_clear(&spool);
 		}
 		frame(user_param);
 	}
